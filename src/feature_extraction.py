@@ -1,43 +1,36 @@
-'''
+"""
 This module contains the functions used to extract features from the
 handwritten digits.
-'''
+"""
 
 import numpy as np
 from numpy import ndarray
 
 
-# pylint: disable=invalid-name
-# pylint: disable=unused-variable
+BLACK = 0
+WHITE = 1
 
 
-##########################################################################
-#                                                                        #
-# START: Feature Extraction                                              #
-#                                                                        #
-##########################################################################
-
-
-# Feature 1
 def density(image: ndarray) -> float:
-    '''`Feature 1` returns the average greyscale value of the given `image`.'''
+    """
+    `Feature 1`
 
-    assert isinstance(image, ndarray)
+    Returns the average greyscale value of the given `image`.
+    """
 
     np_density = np.mean(image)
 
-    assert isinstance(np_density, float)
     assert 0 <= np_density <= 255
 
     return np_density
 
 
-# Feature 2
 def horizontal_symmetry(image: ndarray) -> float:
-    '''
-    `Feature 2` returns the degree of symmetry (a float between 0 and 1)
-    of the given `image` and its reflected counterpart where the line of
-    reflection is along the y-axis on the right side of the image.
+    """
+    `Feature 2`
+
+    Returns the degree of symmetry between the image and its reflection;
+    the line of reflection is along the y-axis on the right side of the image.
     - Notes:
         - The measure of symmetry is defined as the average greyscale value
         of the image obtained by the bitwise XOR of each pixel with its
@@ -47,88 +40,74 @@ def horizontal_symmetry(image: ndarray) -> float:
         - Then, the measure of symmetry is the density of I XOR I'.
         - Uses numpy.bitwise_xor() to perforn I XOR I'.
         - Used numpy.fliplr() to get the left-right reflection of image, I.
-    '''
-
-    assert isinstance(image, ndarray)
+    """
 
     degree_of_symmetry = density(np.bitwise_xor(image, np.fliplr(image)))
 
-    assert isinstance(degree_of_symmetry, float)
     assert 0.0 <= degree_of_symmetry <= 1.0
 
     return degree_of_symmetry
 
 
-# Features 3 & 4
 def horizontal_intersections(image: ndarray) -> tuple[int, float]:
-    '''
-    `Features 3 & 4` return the `maximum` and `average` number of
-    horizontal intersections in the given `image`.
-    '''
+    """
+    `Features 3 & 4`
 
-    assert isinstance(image, ndarray)
+    Returns the (maximum, average) number of (left-right) horizontal intersections
+    in the image.
+    """
 
     return vertical_intersections(np.flip(np.rot90(image)))
 
 
-# Features 5 & 6
 def vertical_intersections(image: ndarray) -> tuple[int, float]:
-    '''
-    `Features 5 & 6` return the `maximum` and `average` number of
-    'vertical intersections', respectively, in the given `image` by
-    scanning each column of the `image` from top to bottom,
-    counting the number of times we 'enter' a white pixel from a black pixel.
-    '''
+    """
+    `Features 5 & 6`
 
-    assert isinstance(image, ndarray)
+    Returns the (maximum, average) number of (top down) vertical intersections
+    in the image.
+    """
 
-    NUM_ROWS, NUM_COLS = image.shape
-    BLACK, WHITE = 0, 1
+    num_rows, num_cols = image.shape
 
-    intersections_per_vertical_search = []
-    for col in range(NUM_COLS):
-        num_intersections, prev = 0, 0
-
-        for row in range(NUM_ROWS):
+    counts = []
+    for col in range(num_cols):
+        count, prev = 0, 0
+        for row in range(num_rows):
             current = image[row][col]
-
             if prev == BLACK and current == WHITE:
-                num_intersections += 1
+                count += 1
             prev = current
+        counts.append(count)
 
-        intersections_per_vertical_search.append(num_intersections)
+    maximum = max(counts)
+    average = np.mean(counts)
 
-    maximum = max(intersections_per_vertical_search)
-    average = np.mean(intersections_per_vertical_search)
-
-    assert isinstance(maximum, int)
-    assert isinstance(average, float)
-    assert 0 <= maximum <= NUM_COLS
-    assert 0 <= average <= NUM_COLS
+    assert 0 <= maximum <= num_cols
+    assert 0 <= average <= num_cols
 
     return maximum, average
 
 
-# Feature 7
 def number_of_loops(image: ndarray) -> int:
-    '''
-    `Feature 7` returns the number of loops in the given `image` by
-    performing a breadth-first search on the image. The black pixels are
-    considered unvisited and the white pixels are considered visited.
-    The number of loops is the number of black sections that must be flood
+    """
+    `Feature 7`
+
+    Returns the number of loops in the given image via BFS flood fill.
+
+    Black (background) pixels are considered unvisited.
+    White pixels are considered visited.
+    The number of loops is thus the number of black sections that must be
     filled to turn the entire image white.
-    '''
+    """
 
-    assert isinstance(image, ndarray)
-
-    BLACK, WHITE = 0, 1
-    NUM_ROWS, NUM_COLS = len(image), len(image[0])
-
+    image = image.copy()
+    num_rows, num_cols = len(image), len(image[0])
     # if np.all(image == WHITE):
     #     return 0
 
     def is_valid(x: int, y: int) -> bool:
-        return (0 <= x < NUM_ROWS) and (0 <= y < NUM_COLS)
+        return (0 <= x < num_rows) and (0 <= y < num_cols)
 
     def bfs(x: int, y: int):
         queue = [[x, y]]
@@ -148,24 +127,22 @@ def number_of_loops(image: ndarray) -> int:
                     queue.append([nx, ny])
                     image[nx][ny] = WHITE
 
-    search_count = 0
-    for row in range(NUM_ROWS):
-        for col in range(NUM_COLS):
+    count = 0
+    for row in range(num_rows):
+        for col in range(num_cols):
             if image[row][col] == BLACK:
                 bfs(row, col)
-                search_count += 1
+                count += 1
 
-    assert isinstance(search_count, int)
-
-    return search_count - 1
+    return count - 1  # subtract 1 to account for the background.
 
 
-# Feature 8
 def horizontally_split_symmetry(image: ndarray) -> float:
-    '''
-    `Features 8` returns the degree of symmetry (a float between 0 and 1)
-    between the left and right halves of the given `image`.
-    '''
+    """
+    `Features 8`
+
+    Returns the degree of symmetry between the left and right halves of the image.
+    """
 
     left, right, *remaining = np.hsplit(image, 2)
 
@@ -174,12 +151,12 @@ def horizontally_split_symmetry(image: ndarray) -> float:
     return density(image=np.bitwise_xor(left, right))
 
 
-# Feature 9
 def vertically_split_symmetry(image: ndarray) -> float:
-    '''
-    `Feature 9` returns the degree of symmetry (a float between 0 and 1)
-    between the top and bottom halves of the given `image`.
-    '''
+    """
+    `Feature 9`
+
+    Returns the degree of symmetry between the top and bottom halves of the image.
+    """
 
     top, bottom, *remaining = np.vsplit(image, 2)
 
@@ -189,7 +166,7 @@ def vertically_split_symmetry(image: ndarray) -> float:
 
 
 def get_image_features(image: ndarray, as_dict: bool = False) -> list:
-    '''
+    """
     Returns the feature values for the given `image`.
 
     Features include:
@@ -204,22 +181,18 @@ def get_image_features(image: ndarray, as_dict: bool = False) -> list:
         of the image.
         - Degree of (vertical) symmetry between the top and bottom halves
         of the image.
-    '''
-
-    assert isinstance(image, ndarray)
+    """
 
     ft_1 = density(image)
     ft_2 = horizontal_symmetry(image)
-    ft_3 = horizontal_intersections(image)[0]  # maximum intersections.
-    ft_4 = horizontal_intersections(image)[1]  # average intersections.
-    ft_5 = vertical_intersections(image)[0]  # maximum intersections.
-    ft_6 = vertical_intersections(image)[1]  # average intersections.
+    ft_3, ft_4 = horizontal_intersections(image)  # maximum, average
+    ft_5, ft_6 = vertical_intersections(image)  # maximum, average
     ft_7 = number_of_loops(image)
     ft_8 = horizontally_split_symmetry(image)
     ft_9 = vertically_split_symmetry(image)
-    # ft_10 = vertical_symmetry(bl_wh_image)
+    # ft_10 = vertical_symmetry(image)
 
-    if as_dict:
+    if as_dict:  # for debugging
         features = {
             '1': ('Density', ft_1),
             '2': ('Horizontal Symmetry', ft_2),
@@ -231,20 +204,8 @@ def get_image_features(image: ndarray, as_dict: bool = False) -> list:
             '8': ('Vertically Split Symmetry', ft_8),
             '9': ('Horizontally Split Symmetry', ft_9),
         }
-        assert isinstance(features, dict)
         return features
 
     features = [ft_1, ft_2, ft_3, ft_4, ft_5, ft_6, ft_7, ft_8, ft_9]
 
-    assert isinstance(features, list)
-    assert len(features) == 9
-    assert all(isinstance(feature, (int, float)) for feature in features)
-
     return features
-
-
-##########################################################################
-#                                                                        #
-# END: Feature Extraction                                                #
-#                                                                        #
-##########################################################################
