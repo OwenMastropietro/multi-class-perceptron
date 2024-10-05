@@ -230,8 +230,11 @@ class TestFeatureExtraction(unittest.TestCase):
 
         # test custom expected values
         for digit, image in enumerate(self._images):
+            img_copy = image.copy()
             self.assertEqual(number_of_loops(image),
                              self._number_of_loops[digit])
+            self.assertTrue(np.array_equal(img_copy, image),
+                            "expected pure function, but mutated image.")
 
     def test_horizontally_split_symmetry(self):
         '''Tests the horizontally_split_symmetry function'''
@@ -347,6 +350,7 @@ class TestFeatureExtraction(unittest.TestCase):
 
     def test_get_image_features(self):
         '''Tests the get_image_features function'''
+
 
 if __name__ == '__main__':
     unittest.main()
