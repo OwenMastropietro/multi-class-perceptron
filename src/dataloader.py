@@ -9,8 +9,7 @@ from feature_extraction import get_image_features
 
 
 TRAINING_DIR = 'data/input/training_data'
-VALIDATION_DIR = 'data/input/validation_data'
-TEST_DATA_DIR = 'data/input/testing_data'
+TESTING_DIR = 'data/input/testing_data'
 
 
 def extract_images(file: str, has_label: bool = True) -> tuple[list, list]:
@@ -21,7 +20,7 @@ def extract_images(file: str, has_label: bool = True) -> tuple[list, list]:
     images = []
     labels = []
 
-    with open(file, mode="r", encoding="utf-8-sig") as f:  # utf-8-sig removes BOM
+    with open(file, mode="r", encoding="us-ascii") as f:
         reader = csv.reader(f)
         for row in reader:
             if has_label:
@@ -68,10 +67,28 @@ class DataLoader:
     A class that loads the training, validation, and testing data.
     """
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(self,
+                 training_dir: str = TRAINING_DIR,
+                 testing_data_dir: str = TESTING_DIR,
+                 verbose: bool = False) -> None:
+        """
+        Initializes the DataLoader with the given training and testing data directories.
+        """
+
+        self.training_dir = training_dir
+        self.testing_dir = testing_data_dir
         self.verbose = verbose
 
-    def get_data(self, folder: str) -> ndarray:
+    def process_image(self, image, label):
+        """
+        Helper.
+        """
+
+        features = get_image_features(get_black_white(image))
+
+        return features, label
+
+    def training_data(self) -> ndarray:
         """
         Returns data from the given folder.
 
@@ -88,7 +105,7 @@ class DataLoader:
         class_labels = []
         data = []
         for i in range(10):  # digits 0-9
-            filename = f"{folder}/handwritten_samples_{i}.csv"
+            filename = f"{self.training_dir}/handwritten_samples_{i}.csv"
             if self.verbose:
                 print(f"\tComputing Feature Values in ./{filename}")
 
@@ -113,31 +130,21 @@ class DataLoader:
 
         return data
 
-    def training_data(self) -> ndarray:
-        """
-        Returns samples of data for training.
-        """
-
-        return self.get_data(TRAINING_DIR)
-
-    def validation_data(self) -> ndarray:
-        """
-        Returns samples of data for validation.
-        """
-
-        return self.get_data(VALIDATION_DIR)
-
     def testing_data(self) -> ndarray:
         """
-        Builds `testing_data` from the files corresponding to testing
-        found in the 'test' folder.
+        Returns data from the given folder.
+
+        Each row corresponds to a handwritten digit such that:
+        - row[0:n] contains the n-1 feature values.
+        - row[n] contains the threshold value.
+        - no class label
         """
 
         if self.verbose:
             print(f"{'-' * 70}")
             print("Building Testing Set...")
 
-        filename = f"{TEST_DATA_DIR}/unlabeled_digits.csv"
+        filename = f"{self.testing_dir}/unlabeled_digits.csv"
         images, _ = extract_images(filename, has_label=False)
 
         data = [get_image_features(get_black_white(image))

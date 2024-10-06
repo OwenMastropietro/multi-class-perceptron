@@ -11,19 +11,26 @@ class Model:
     A simple Single-Layer Muli-Class Perceptron Model.
     """
 
-    def __init__(self,
-                 weights: ndarray,
-                 validation_data: ndarray,
-                 testing_data: ndarray,
-                 verbose: bool = False) -> None:
+    def __init__(self, weights: ndarray, verbose: bool = False) -> None:
         """
         Initializes the model with the given `weights`.
         """
 
         self.weights = weights
         self.verbose = verbose
-        self.validation_data = validation_data
-        self.testing_data = testing_data
+        self.training_data = None
+        self.validation_data = None
+
+    def split(self, training_data: ndarray) -> None:
+        """
+        Splits the given `training_data` into `training_data` and `validation_data`.
+        """
+
+        num_rows = training_data.shape[0]
+        num_training = int(0.8 * num_rows)  # 80% training, 20% validation
+
+        self.training_data = training_data[:num_training]
+        self.validation_data = training_data[num_training:]
 
     def fit(self, training_data: ndarray, epochs: int) -> tuple[int, int, int]:
         """
@@ -31,12 +38,19 @@ class Model:
         prediction errors.
         """
 
+        if self.verbose:
+            print(f"{'-' * 70}")
+            print("Fitting Model...")
+
+        # Set self.training_data and self.validation_data
+        self.split(training_data)
+
         epoch_weights = []  # weights for each epoch
         epoch_errors = []  # number of incorrect predictions for each epoch
 
         eta = float(0.08)  # learning rate, η
         for epoch in range(epochs + 1):
-            for row in training_data:
+            for row in self.training_data:
                 class_label = int(row[10])
 
                 features = row[0:10]
@@ -51,11 +65,15 @@ class Model:
             epoch_weights.append(self.weights.copy())
             epoch_errors.append(num_incorrect)
 
-            if (epoch + 1) % 10 == 0:
+            if self.verbose and (epoch + 1) % 10 == 0:
                 accuracy = num_correct / (num_correct + num_incorrect)
-                print(f"Epoch: {epoch + 1}/{epochs}, Accuracy: {accuracy:.2f}")
+                print(f"\tEpoch: {
+                      epoch + 1}/{epochs}, Accuracy: {accuracy:.2f}")
 
         self.weights = epoch_weights[np.argmin(epoch_errors)]
+
+        if self.verbose:
+            print(f"{'-' * 70}\n")
 
         return self.weights
 
@@ -64,8 +82,6 @@ class Model:
         Returns the number of correct and incorrect predictions made
         using the given `weights`.
         """
-
-        assert isinstance(weights, ndarray)
 
         num_successes, num_errors = 0, 0
         for row in self.validation_data:
@@ -80,7 +96,7 @@ class Model:
 
         return num_successes, num_errors
 
-    def test(self) -> list:
+    def test(self, testing_data) -> list:
         """
         Tests the model on the validation data.
         Returns `predictions` for each image / handwritten digit in
@@ -88,7 +104,7 @@ class Model:
         """
 
         predictions = []  # predicted labels
-        for row in self.testing_data:
+        for row in testing_data:
             features = row[0:10]
             logits = [np.dot(weights, features) for weights in self.weights]
             predictions.append(np.argmax(logits))
@@ -97,7 +113,8 @@ class Model:
                    for prediction in predictions)
 
         if self.verbose:
-            print(f"\n{'-' * 70}")
+            print(f"{'-' * 70}")
             print(f"Predicted Labels:\n{predictions}")
+            print(f"{'-' * 70}\n")
 
         return predictions
