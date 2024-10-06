@@ -11,6 +11,8 @@ from feature_extraction import get_image_features
 
 TRAINING_DIR = 'data/input/training_data'
 TESTING_DIR = 'data/input/testing_data'
+BLACK = 0
+WHITE = 1
 
 
 def extract_images(file: str, has_label: bool = True) -> tuple[list, list]:
@@ -36,31 +38,13 @@ def extract_images(file: str, has_label: bool = True) -> tuple[list, list]:
 
 def get_black_white(image: ndarray, threshold=128) -> ndarray:
     """
-    Returns a black and white version of the given `image`, forcing all
-    pixels greater than the given `threshold` to be `1` (black), else
-    `0` (white).
+    Returns the image in black and white.
+
+    All pixels less than the threshold are set to black (0),
+    and all others are set to white (1).
     """
 
-    assert isinstance(image, ndarray)
-
-    black, white = 0, 1
-
-    # PRE-NUMPY DAYS
-    # pixels = []
-    # for row in range(28):
-    #     for col in range(28):
-    #         if (int(image[row][col]) > 128):  # lower cut off?
-    #             pixels.append(1)  # white
-    #         else:
-    #             pixels.append(0)  # black
-    # return np.reshape(pixels, (28, 28))
-
-    # Convert to Black and White.
-    binary_image = np.where(image < threshold, black, white)
-
-    assert isinstance(binary_image, ndarray)
-
-    return binary_image
+    return np.where(image < threshold, BLACK, WHITE)
 
 
 class DataLoader:
@@ -70,19 +54,15 @@ class DataLoader:
 
     def __init__(self,
                  training_dir: str = TRAINING_DIR,
-                 testing_data_dir: str = TESTING_DIR,
+                 testing_dir: str = TESTING_DIR,
                  verbose: bool = False) -> None:
-        """
-        Initializes the DataLoader with the given training and testing data directories.
-        """
-
         self.training_dir = training_dir
-        self.testing_dir = testing_data_dir
+        self.testing_dir = testing_dir
         self.verbose = verbose
 
     def process_image(self, image, label):
         """
-        Helper.
+        Returns a tuple of (features, label) for the given image.
         """
 
         features = get_image_features(get_black_white(image))
