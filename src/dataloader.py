@@ -3,6 +3,7 @@ A module for loading training, validation, and testing data.
 """
 
 import csv
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from numpy import ndarray
 from feature_extraction import get_image_features
@@ -104,15 +105,22 @@ class DataLoader:
 
         class_labels = []
         data = []
-        for i in range(10):  # digits 0-9
-            filename = f"{self.training_dir}/handwritten_samples_{i}.csv"
-            if self.verbose:
-                print(f"\tComputing Feature Values in ./{filename}")
+        with ProcessPoolExecutor(max_workers=10) as executor:
+            futures = []  # futures for parallel processing
+            for i in range(10):  # digits 0-9
+                filename = f"{self.training_dir}/handwritten_samples_{i}.csv"
+                if self.verbose:
+                    print(f"\tComputing Feature Values in ./{filename}")
 
-            images, labels = extract_images(file=filename)
-            for image, label in zip(images, labels):
+                images, labels = extract_images(file=filename)
+                for image, label in zip(images, labels):
+                    futures.append(
+                        executor.submit(self.process_image, image, label))
+
+            for future in futures:
+                features, label = future.result()
                 class_labels.append([label])
-                data.append(get_image_features(get_black_white(image)))
+                data.append(features)
 
         # Create a column of threshold values = -1.
         thresholds = np.full(shape=(len(data), 1), fill_value=-1)
