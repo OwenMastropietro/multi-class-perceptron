@@ -2,7 +2,7 @@
 A module for loading training, validation, and testing data.
 """
 
-import pandas as pd
+import csv
 import numpy as np
 from numpy import ndarray
 from feature_extraction import get_image_features
@@ -18,19 +18,18 @@ def extract_images(file: str, has_label: bool = True) -> tuple[list, list]:
     Returns a tuple of (images, labels) extracted from a CSV file.
     """
 
-    pixel_data = pd.read_csv(file)
-
-    labels = []
-    if has_label:
-        class_label = pixel_data.columns.values[0]
-        labels = pixel_data[class_label].values.tolist()
-        pixel_data = pixel_data.drop(class_label, axis=1)
-
     images = []
-    for img_idx in range(pixel_data.shape[0]):
-        img_as_row = pixel_data.iloc[img_idx].to_numpy()
-        img_as_grid = np.reshape(img_as_row, newshape=(28, 28))  # 28x28=784
-        images.append(img_as_grid)
+    labels = []
+
+    with open(file, mode="r", encoding="utf-8-sig") as f:  # utf-8-sig removes BOM
+        reader = csv.reader(f)
+        for row in reader:
+            if has_label:
+                label = int(row[0])
+                labels.append(label)
+                row = row[1:]  # remove the label
+            image = np.array(row, dtype=int).reshape(28, 28)
+            images.append(image)
 
     return images, labels
 
